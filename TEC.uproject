@@ -18,6 +18,30 @@
 			"Name": "EasyUtilityAI",
 			"Enabled": true,
 			"MarketplaceURL": "https://www.unrealengine.com/marketplace/product/easy-utility-ai"
+		},
+		{
+			"Name": "TrickyAnimationComponents",
+			"Enabled": true
+		},
+		{
+			"Name": "TrickyInteractionSystem",
+			"Enabled": true
+		},
+		{
+			"Name": "TrickyKeyringSystem",
+			"Enabled": true
+		},
+		{
+			"Name": "TrickyDoors",
+			"Enabled": true
+		},
+		{
+			"Name": "TrickyPickups",
+			"Enabled": true
+		},
+		{
+			"Name": "TrickyButtons",
+			"Enabled": true
 		}
 	]
 }
