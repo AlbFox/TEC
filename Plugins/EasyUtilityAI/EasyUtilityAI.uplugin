@@ -1,0 +1,39 @@
+{
+	"FileVersion": 3,
+	"Version": 19,
+	"VersionName": "1.18",
+	"FriendlyName": "Easy Utility AI",
+	"Description": "Fast and flexible AI design framework using only Blueprints",
+	"Category": "Michael Hegemann",
+	"CreatedBy": "Michael Hegemann",
+	"CreatedByURL": "https://twitter.com/HegiDev",
+	"DocsURL": "https://bit.ly/2OJUiWt",
+	"MarketplaceURL": "https://www.unrealengine.com/marketplace/product/easy-utility-ai",
+	"SupportURL": "mailto:hegidev@gmail.com",
+	"EngineVersion": "4.27.0",
+	"CanContainContent": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "EasyUtilityAI",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Linux",
+				"Mac",
+				"IOS",
+				"Android"
+			]
+		},
+		{
+			"Name": "EasyUtilityAIEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac"
+			]
+		}
+	]
+}

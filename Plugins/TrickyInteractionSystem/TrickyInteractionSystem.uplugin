@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"Version": 5,
+	"VersionName": "1.2",
+	"FriendlyName": "TrickyInteractionSystem",
+	"Description": "A small plugin for implementation of a flexible interaction system.",
+	"Category": "TrickyPrototyping",
+	"CreatedBy": "Artyom \"Tricky_Fat_Cat\" Volkov",
+	"CreatedByURL": "https://twitter.com/tricky_fat_cat",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EngineVersion": "4.27.0",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "TrickyInteractionSystem",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Linux",
+				"Mac"
+			]
+		}
+	]
+}
