@@ -8,8 +8,8 @@
 #include "InteractionLibrary.h"
 #include "DoorInteractive.generated.h"
 
-class UBoxComponent;
-class UKeyType;
+class ULockComponent;
+class UBoxInteractionComponent;
 
 /**
  * A door which requires interaction to be opened.
@@ -23,18 +23,15 @@ public:
 	ADoorInteractive();
 
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Components")
-	UBoxComponent* InteractionTriggerComponent = nullptr;
+	UBoxInteractionComponent* InteractionTriggerComponent = nullptr;
 
-	/**Toggles if the door requires a key to open it.*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Door")
-	bool bRequiredKey = false;
-
-	/**Key class which the actor must have to open the door.*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Door", meta=(EditCondition="bRequiredKey"))
-	TSubclassOf<UKeyType> KeyClass = nullptr;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="Components")
+	ULockComponent* LockComponent = nullptr;
 
 	/**Toggles if the door will close automatically after some time.*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Door")
@@ -51,15 +48,14 @@ protected:
 	/**Interaction messages for different states of the door.*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Door|Interaction")
 	TMap<EDoorState, FString> InteractionMessages{
-			{EDoorState::Closed, "Open"},
-			{EDoorState::Opened, "Close"},
-			{EDoorState::Locked, "Unlock"}
+		{EDoorState::Closed, "Open"},
+		{EDoorState::Opened, "Close"},
+		{EDoorState::Locked, "Unlock"}
 	};
 
 	/**The message in case the actor don't have a key to unlock the door.*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Door|Interaction")
 	FString CantUnlockMessage{"Can't unlock"};
-
 
 private:
 	bool bIsActorInTrigger = false;
@@ -70,7 +66,6 @@ private:
 
 	void UpdateInteractionMessage(const AActor* Actor, const FString& NewMessage);
 
-
 	UFUNCTION()
 	void OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComponent,
 	                           AActor* OtherActor,
@@ -80,8 +75,8 @@ private:
 	                           const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent,
-	                         AActor* OtherActor,
-	                         UPrimitiveComponent* OtherComp,
-	                         int32 OtherBodyIndex);
+	void OnActorAddedToQueue(const AActor* OtherActor);
+
+	UFUNCTION()
+	void OnActorRemovedFromQueue(const AActor* OtherActor);
 };

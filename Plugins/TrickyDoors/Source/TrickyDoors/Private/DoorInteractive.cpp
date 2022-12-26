@@ -3,21 +3,39 @@
 
 #include "DoorInteractive.h"
 
-#include "KeyringLibrary.h"
-#include "KeyType.h"
+#include "BoxInteractionComponent.h"
+#include "LockComponent.h"
 #include "Components/BoxComponent.h"
 
 ADoorInteractive::ADoorInteractive()
 {
-	InteractionTriggerComponent = CreateDefaultSubobject<UBoxComponent>("InteractionTrigger");
+	InteractionTriggerComponent = CreateDefaultSubobject<UBoxInteractionComponent>("InteractionTrigger");
 	InteractionTriggerComponent->SetupAttachment(GetRootComponent());
 	UInteractionLibrary::SetTriggerDefaultCollision(InteractionTriggerComponent);
+
+	LockComponent = CreateDefaultSubobject<ULockComponent>("LockComponent");
+}
+
+void ADoorInteractive::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (LockComponent)
+	{
+		LockComponent->bLockedOnStart = InitialState == EDoorState::Locked;
+	}
+
+	if (InteractionTriggerComponent)
+	{
+		InteractionTriggerComponent->SetInteractionData(InteractionData);
+	}
 }
 
 void ADoorInteractive::BeginPlay()
 {
 	InteractionTriggerComponent->OnComponentBeginOverlap.AddDynamic(this, &ADoorInteractive::OnTriggerBeginOverlap);
-	InteractionTriggerComponent->OnComponentEndOverlap.AddDynamic(this, &ADoorInteractive::OnTriggerEndOverlap);
+	InteractionTriggerComponent->OnActorAdded.AddDynamic(this, &ADoorInteractive::OnActorAddedToQueue);
+	InteractionTriggerComponent->OnActorRemoved.AddDynamic(this, &ADoorInteractive::OnActorRemovedFromQueue);
 	Super::BeginPlay();
 }
 
@@ -32,7 +50,7 @@ bool ADoorInteractive::FinishInteraction_Implementation(AActor* OtherActor)
 		{
 			CalculateSwingDirection(OtherActor);
 		}
-		
+
 		Open();
 
 		if (!bIsReversible)
@@ -44,7 +62,7 @@ bool ADoorInteractive::FinishInteraction_Implementation(AActor* OtherActor)
 	case EDoorState::Opened:
 		UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Closed]);
 		Close();
-		
+
 		if (!bIsReversible)
 		{
 			InteractionTriggerComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -52,28 +70,34 @@ bool ADoorInteractive::FinishInteraction_Implementation(AActor* OtherActor)
 		break;
 
 	case EDoorState::Locked:
-		if (UKeyringLibrary::ActorHasKey(OtherActor, KeyClass))
+		if (LockComponent->Unlock(OtherActor))
 		{
 			SetIsLocked(false);
 			UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Closed]);
 		}
+		else
+		{
+			return false;
+		}
 		break;
 
 	case EDoorState::Transition:
-		if (bIsReversible)
+		if (!bIsReversible)
 		{
-			if (DoorAnimationComponent->Reverse())
-			{
-				switch (DoorAnimationComponent->GetTargetState())
-				{
-				case ETimelineAnimationState::Begin:
-					UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Closed]);
-					break;
+			return false;
+		}
 
-				case ETimelineAnimationState::End:
-					UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Opened]);
-					break;
-				}
+		if (DoorAnimationComponent->Reverse())
+		{
+			switch (DoorAnimationComponent->GetTargetState())
+			{
+			case ETimelineAnimationState::Begin:
+				UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Closed]);
+				break;
+
+			case ETimelineAnimationState::End:
+				UpdateInteractionMessage(OtherActor, InteractionMessages[EDoorState::Opened]);
+				break;
 			}
 		}
 		break;
@@ -93,14 +117,14 @@ void ADoorInteractive::ChangeState(const ETimelineAnimationState NewAnimationSta
 	case ETimelineAnimationState::End:
 		InteractionTriggerComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		break;
-		
+
 	default:
 		break;
 	}
 
 	Super::ChangeState(NewAnimationState);
 
-	if (CurrentState ==  EDoorState::Opened && !bIsActorInTrigger)
+	if (CurrentState == EDoorState::Opened && !bIsActorInTrigger)
 	{
 		StartAutoClosingTimer(ClosingDelayDuration);
 	}
@@ -109,7 +133,7 @@ void ADoorInteractive::ChangeState(const ETimelineAnimationState NewAnimationSta
 void ADoorInteractive::UpdateInteractionMessage(const AActor* Actor, const FString& NewMessage)
 {
 	InteractionData.InteractionMessage = NewMessage;
-	UInteractionLibrary::UpdateInteractionMessage(Actor, this, NewMessage);
+	InteractionTriggerComponent->SetInteractionMessage(Actor, NewMessage);
 }
 
 void ADoorInteractive::OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComponent,
@@ -123,13 +147,7 @@ void ADoorInteractive::OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComp
 	{
 		return;
 	}
-
-	if (UInteractionLibrary::AddToInteractionQueue(OtherActor, this, InteractionData))
-	{
-		bIsActorInTrigger = true;
-		StopAutoClosingTimer();
-	}
-
+	
 	switch (CurrentState)
 	{
 	case EDoorState::Closed:
@@ -137,16 +155,13 @@ void ADoorInteractive::OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComp
 		UpdateInteractionMessage(OtherActor, InteractionMessages[CurrentState]);
 
 	case EDoorState::Locked:
-		if (bRequiredKey && KeyClass)
+		if (LockComponent->CanUseLock(OtherActor))
 		{
-			if (UKeyringLibrary::ActorHasKey(OtherActor, KeyClass))
-			{
-				UpdateInteractionMessage(OtherActor, InteractionMessages[CurrentState]);
-			}
-			else
-			{
-				UpdateInteractionMessage(OtherActor, CantUnlockMessage);
-			}
+			UpdateInteractionMessage(OtherActor, InteractionMessages[CurrentState]);
+		}
+		else
+		{
+			UpdateInteractionMessage(OtherActor, CantUnlockMessage);
 		}
 		break;
 
@@ -155,23 +170,28 @@ void ADoorInteractive::OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComp
 	}
 }
 
-void ADoorInteractive::OnTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent,
-                                           AActor* OtherActor,
-                                           UPrimitiveComponent* OtherComp,
-                                           int32 OtherBodyIndex)
+void ADoorInteractive::OnActorAddedToQueue(const AActor* OtherActor)
 {
 	if (!IsValid(OtherActor))
 	{
 		return;
 	}
 
-	if (UInteractionLibrary::RemoveFromInteractionQueue(OtherActor, this))
-	{
-		bIsActorInTrigger = false;
+	bIsActorInTrigger = true;
+	StopAutoClosingTimer();
+}
 
-		if (CurrentState == EDoorState::Opened)
-		{
-			StartAutoClosingTimer(ClosingDelayDuration);
-		}
+void ADoorInteractive::OnActorRemovedFromQueue(const AActor* OtherActor)
+{
+	if (!IsValid(OtherActor))
+	{
+		return;
+	}
+
+	bIsActorInTrigger = false;
+
+	if (CurrentState == EDoorState::Opened)
+	{
+		StartAutoClosingTimer(ClosingDelayDuration);
 	}
 }

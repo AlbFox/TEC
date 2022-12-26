@@ -3,8 +3,7 @@
 
 #include "DoorAuto.h"
 
-#include "KeyringLibrary.h"
-#include "KeyType.h"
+#include "LockComponent.h"
 #include "Components/BoxComponent.h"
 
 ADoorAuto::ADoorAuto()
@@ -17,6 +16,18 @@ ADoorAuto::ADoorAuto()
 	ActivationTriggerComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	ActivationTriggerComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 	ActivationTriggerComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	LockComponent = CreateDefaultSubobject<ULockComponent>("LockComponent");
+}
+
+void ADoorAuto::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (LockComponent)
+	{
+		LockComponent->bLockedOnStart = InitialState == EDoorState::Locked;
+	}
 }
 
 void ADoorAuto::BeginPlay()
@@ -25,6 +36,8 @@ void ADoorAuto::BeginPlay()
 
 	ActivationTriggerComponent->OnComponentBeginOverlap.AddDynamic(this, &ADoorAuto::OnActivationTriggerBeginOverlap);
 	ActivationTriggerComponent->OnComponentEndOverlap.AddDynamic(this, &ADoorAuto::OnActivationTriggerEndOverlap);
+
+	LockComponent->bLockedOnStart = CurrentState == EDoorState::Locked;
 }
 
 void ADoorAuto::OnActivationTriggerBeginOverlap(UPrimitiveComponent* OverlappedComponent,
@@ -43,7 +56,7 @@ void ADoorAuto::OnActivationTriggerBeginOverlap(UPrimitiveComponent* OverlappedC
 	{
 		CalculateSwingDirection(OtherActor);
 	}
-	
+
 	if (bIsClosingDelayed)
 	{
 		if (StopAutoClosingTimer())
@@ -52,10 +65,12 @@ void ADoorAuto::OnActivationTriggerBeginOverlap(UPrimitiveComponent* OverlappedC
 		}
 	}
 
-	if (KeyClass && bRequiredKey)
+	if (LockComponent->GetIsLocked())
 	{
-		if (UKeyringLibrary::UseKey(OtherActor, KeyClass))
+		if (LockComponent->Unlock(OtherActor))
 		{
+			CalculateSwingDirection(OtherActor);
+			SetIsLocked(LockComponent->GetIsLocked());
 			Open();
 		}
 	}
