@@ -1,4 +1,4 @@
-﻿// MIT License Copyright (c) 2022 Artyom "Tricky Fat Cat" Volkov
+﻿// MIT License Copyright. Created by Artyom "Tricky Fat Cat" Volkov
 
 #pragma once
 
@@ -108,4 +108,6 @@ private:
 	AActor* TargetActor = nullptr;
 
 	bool ActivatePickupEffect();
+
+	void SetAnimationTargetLocation() const;
 };

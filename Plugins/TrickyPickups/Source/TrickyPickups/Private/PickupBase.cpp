@@ -1,5 +1,4 @@
-﻿// MIT License Copyright (c) 2022 Artyom "Tricky Fat Cat" Volkov
-
+﻿// MIT License Copyright. Created by Artyom "Tricky Fat Cat" Volkov
 
 #include "PickupBase.h"
 
@@ -14,26 +13,31 @@ APickupBase::APickupBase()
 	SetRootComponent(PickupRootComponent);
 
 	EaseAnimationComponent = CreateDefaultSubobject<UEaseAnimationComponent>("EaseAnimation");
-	EaseAnimationComponent->bFollowActor = true;
-	EaseAnimationComponent->SetIsEnabled(false);
+	EaseAnimationComponent->Stop();
 }
 
 void APickupBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	EaseAnimationComponent->Stop();
 }
 
 void APickupBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bInterpolateToTarget && IsValid(TargetActor) && EaseAnimationComponent->GetIsEnabled())
+	if (bInterpolateToTarget && IsValid(TargetActor) && EaseAnimationComponent->GetIsPlaying())
 	{
-		const float Distance = FVector{GetActorLocation() - TargetActor->GetActorLocation()}.Size();
+		const float Distance = FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation());
 
-		if (Distance <= ActivationDistance)
+		if (Distance <= ActivationDistance * ActivationDistance)
 		{
 			ActivatePickupEffect();
+		}
+		else
+		{
+			SetAnimationTargetLocation();
 		}
 	}
 }
@@ -49,8 +53,8 @@ bool APickupBase::ActivatePickup(AActor* OtherActor)
 
 	if (bInterpolateToTarget)
 	{
-		EaseAnimationComponent->TargetActor = TargetActor;
-		EaseAnimationComponent->SetIsEnabled(true);
+		SetAnimationTargetLocation();
+		EaseAnimationComponent->PlayFromStart();
 		return true;
 	}
 
@@ -85,8 +89,7 @@ void APickupBase::DisablePickup()
 
 	if (bInterpolateToTarget)
 	{
-		EaseAnimationComponent->SetIsEnabled(false);
-		EaseAnimationComponent->TargetActor = nullptr;
+		EaseAnimationComponent->Stop();
 	}
 
 	OnPickupDisabled();
@@ -112,4 +115,14 @@ bool APickupBase::ActivatePickupEffect()
 	}
 
 	return false;
+}
+
+void APickupBase::SetAnimationTargetLocation() const
+{
+	if (!IsValid(TargetActor))
+	{
+		return;
+	}
+
+	EaseAnimationComponent->SetTargetLocation(TargetActor->GetActorLocation());
 }

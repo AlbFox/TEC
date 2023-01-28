@@ -3,21 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "Components/SceneComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "TrickyAnimationComponentsLibrary.h"
-#include "EaseAnimationComponent.generated.h"
+#include "EasingAnimationSceneComponent.generated.h"
 
 /**
- * An actor component which can animate owners location, rotation and scale using easing functions.
+ * A scene component which can animate its location, rotation and scale using easing functions.
  */
 UCLASS(ClassGroup=(TrickyAnimationComponents), meta=(BlueprintSpawnableComponent))
-class TRICKYANIMATIONCOMPONENTS_API UEaseAnimationComponent : public UActorComponent
+class TRICKYANIMATIONCOMPONENTS_API UEasingAnimationSceneComponent : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
-	UEaseAnimationComponent();
+	UEasingAnimationSceneComponent();
 
 protected:
 	virtual void InitializeComponent() override;
@@ -36,7 +36,7 @@ public:
 	/**Toggles if the animation will start on begin play.*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	bool bAutoPlay = false;
-	
+
 	/**If true, PlayFormEnd function will be called on begin play, else PlayFromStart.*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation", meta=(EditCondition="bAutoPlay", EditConditionHides))
 	bool bPlayFromEnd = false;
@@ -57,7 +57,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animation", meta=(InlineEditConditionToggle, AllowPreserveRatio="true"))
 	bool bAnimateScale = false;
 
-	/**Ease function which will be used for the animation.*/
+	/**Ease function which will be used for animation.*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Animation")
 	TEnumAsByte<EEasingFunc::Type> EaseFunction = EEasingFunc::EaseInOut;
 
@@ -75,25 +75,25 @@ public:
 		meta=(EditCondition="EaseFunction == EEasingFunc::Step", EditConditionHides))
 	int32 Steps = 10.f;
 
-	UFUNCTION(BlueprintGetter, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintGetter, Category="TrickyAnimations|EasingAnimationScene")
 	bool GetIsPlaying() const;
 
 	/**Starts the animation from initial location/rotation/scale.*/
-	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EasingAnimationScene")
 	bool PlayFromStart();
 
 	/**Starts the animation from target location/rotation/scale.*/
-	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EasingAnimationScene")
 	bool PlayFromEnd();
-	
+
 	/**Stops the animation.*/
-	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintCallable, Category="TrickyAnimations|EasingAnimationScene")
 	bool Stop();
 
-	UFUNCTION(BlueprintGetter, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintGetter, Category="TrickyAnimations|EasingAnimationScene")
 	float GetEaseDuration() const;
 
-	UFUNCTION(BlueprintSetter, Category="TrickyAnimations|EaseAnimation")
+	UFUNCTION(BlueprintSetter, Category="TrickyAnimations|EasingAnimationScene")
 	void SetEaseDuration(const float Value);
 
 	UFUNCTION(BlueprintGetter)
@@ -120,18 +120,18 @@ private:
 		Category="Animation")
 	bool bIsPlaying = false;
 
-	/**Target world location of the animation.*/
+	/**Target relative location of the animation.*/
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetTargetLocation, BlueprintSetter=SetTargetLocation, Category="Animation",
 		meta=(AllowPrivateAccess, EditCondition="bAnimateLocation"))
 	FVector TargetLocation{FVector::ZeroVector};
 
-	/**Target world rotation of the animation.*/
+	/**Target relative rotation of the animation.*/
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetTargetRotation, BlueprintSetter=SetTargetRotation, BlueprintReadWrite,
 		Category="Animation",
 		meta=(AllowPrivateAccess, EditCondition="bAnimateRotation"))
 	FRotator TargetRotation{FRotator::ZeroRotator};
 
-	/**Target world scale of the animation.*/
+	/**Target relative scale of the animation.*/
 	UPROPERTY(EditAnywhere, BlueprintGetter=GetTargetScale, BlueprintSetter=SetTargetScale, Category="Animation",
 		meta=(AllowPrivateAccess, EditCondition="bAnimateScale"))
 	FVector TargetScale{FVector::OneVector};
