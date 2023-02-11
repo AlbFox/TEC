@@ -42,6 +42,10 @@
 		{
 			"Name": "TrickyButtons",
 			"Enabled": true
+		},
+		{
+			"Name": "ApexDestruction",
+			"Enabled": true
 		}
 	]
 }
