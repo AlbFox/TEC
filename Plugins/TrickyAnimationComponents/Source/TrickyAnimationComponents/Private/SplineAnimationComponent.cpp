@@ -34,16 +34,25 @@ void USplineAnimationComponent::Activate(bool bReset)
 
 	if (HasSplineComponent())
 	{
-		if (bStopAtPoints && !bUseCustomStops)
+		switch (StopMode)
 		{
+		case ESplineAnimationStopMode::None:
+		case ESplineAnimationStopMode::FirstAndLast:
+			PointsIndexes.Empty();
+			PointsIndexes.Emplace(0);
+			PointsIndexes.Emplace(GetLastSplinePoint());
+			break;
+
+		case ESplineAnimationStopMode::All:
 			PointsIndexes.Empty();
 			for (int32 i = 0; i <= GetLastSplinePoint(); i++)
 			{
 				PointsIndexes.Emplace(i);
 			}
-		}
-		else if (bStopAtPoints && bUseCustomStops)
-		{
+			break;
+
+		case ESplineAnimationStopMode::Custom:
+
 			PointsIndexes.Empty();
 			if (!CustomStops.Contains(0))
 			{
@@ -67,12 +76,7 @@ void USplineAnimationComponent::Activate(bool bReset)
 			CustomStops.KeySort(PredicateSort);
 
 			CustomStops.GetKeys(PointsIndexes);
-		}
-		else if (!bStopAtPoints)
-		{
-			PointsIndexes.Empty();
-			PointsIndexes.Emplace(0);
-			PointsIndexes.Emplace(GetLastSplinePoint());
+			break;
 		}
 
 		if (AnimationMode == ESplineAnimationMode::OneWay || AnimationMode == ESplineAnimationMode::PingPong)
@@ -145,7 +149,7 @@ void USplineAnimationComponent::Start()
 		return;
 	}
 
-	if (bStopAtPoints && bWaitAtStart)
+	if (StopMode != ESplineAnimationStopMode::None && bWaitOnAnimStart)
 	{
 		StartWaitTimer();
 		return;
@@ -356,7 +360,7 @@ void USplineAnimationComponent::CalculateNextPointIndex()
 	switch (AnimationMode)
 	{
 	case ESplineAnimationMode::OneWay:
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			NextPointIndex = bIsReversed ? CurrentPointIndex - 1 : CurrentPointIndex + 1;
 			NextPointIndex = FMath::Clamp(NextPointIndex, 0, GetLastPointIndex());
@@ -370,7 +374,7 @@ void USplineAnimationComponent::CalculateNextPointIndex()
 	case ESplineAnimationMode::Loop:
 		NextPointIndex = bIsReversed ? 0 : GetLastPointIndex();
 
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			NextPointIndex = bIsReversed ? CurrentPointIndex - 1 : CurrentPointIndex + 1;
 			NextPointIndex = FMath::Clamp(NextPointIndex, 0, GetLastPointIndex());
@@ -378,7 +382,7 @@ void USplineAnimationComponent::CalculateNextPointIndex()
 		break;
 
 	case ESplineAnimationMode::PingPong:
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			if (CurrentPointIndex == 0)
 			{
@@ -424,9 +428,8 @@ void USplineAnimationComponent::AnimateAlongSpline(const float Progress) const
 
 void USplineAnimationComponent::MoveAlongSpline(const float Progress) const
 {
-	const float Position = GetPositionAtSpline(CurrentPointIndex, NextPointIndex, Progress);
 	const FVector NewLocation{
-			SplineComponent->GetLocationAtDistanceAlongSpline(Position + SplineOffset, ESplineCoordinateSpace::World)
+		SplineComponent->GetLocationAtDistanceAlongSpline(CalculateDistance(Progress), ESplineCoordinateSpace::World)
 	};
 
 	GetOwner()->SetActorLocation(NewLocation + LocationOffset);
@@ -437,9 +440,10 @@ void USplineAnimationComponent::RotateAlongSpline(const float Progress) const
 	if (InheritRotation.bX || InheritRotation.bY || InheritRotation.bZ)
 	{
 		const FRotator CurrentRotation{GetOwner()->GetActorRotation()};
-		const float Position = GetPositionAtSpline(CurrentPointIndex, NextPointIndex, Progress);
+
 		const FRotator RotationAlongSpline{
-				SplineComponent->GetRotationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::World)
+			SplineComponent->GetRotationAtDistanceAlongSpline(CalculateDistance(Progress),
+			                                                  ESplineCoordinateSpace::World)
 		};
 
 		const float NewRoll = InheritRotation.bX ? RotationAlongSpline.Roll : CurrentRotation.Roll;
@@ -455,8 +459,7 @@ void USplineAnimationComponent::ScaleAlongSpline(const float Progress) const
 	if (InheritScale.bX || InheritScale.bY || InheritScale.bZ)
 	{
 		const FVector CurrentScale{GetOwner()->GetActorScale3D()};
-		const float Position = GetPositionAtSpline(CurrentPointIndex, NextPointIndex, Progress);
-		const FVector ScaleAlongSpline{SplineComponent->GetScaleAtDistanceAlongSpline(Position)};
+		const FVector ScaleAlongSpline{SplineComponent->GetScaleAtDistanceAlongSpline(CalculateDistance(Progress))};
 
 		const float NewScaleX = InheritScale.bX ? ScaleAlongSpline.X : CurrentScale.X;
 		const float NewScaleY = InheritScale.bY ? ScaleAlongSpline.Y : CurrentScale.Y;
@@ -481,7 +484,7 @@ void USplineAnimationComponent::FinishAnimation()
 	switch (AnimationMode)
 	{
 	case ESplineAnimationMode::OneWay:
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			CurrentPointIndex = NextPointIndex;
 			CalculateNextPointIndex();
@@ -492,7 +495,7 @@ void USplineAnimationComponent::FinishAnimation()
 		break;
 
 	case ESplineAnimationMode::Loop:
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			CurrentPointIndex = NextPointIndex;
 
@@ -520,14 +523,14 @@ void USplineAnimationComponent::FinishAnimation()
 		}
 
 		CalculateNextPointIndex();
-		bStopAtPoints ? StartWaitTimer() : Start();
+		IsStoppingAtPoints() ? StartWaitTimer() : Start();
 		break;
 
 	case ESplineAnimationMode::PingPong:
 		CurrentPointIndex = NextPointIndex;
 		CalculateNextPointIndex();
 
-		if (bStopAtPoints)
+		if (IsStoppingAtPoints())
 		{
 			StartWaitTimer();
 			OnAnimationStopped.Broadcast(CurrentPointIndex);
@@ -625,14 +628,16 @@ int32 USplineAnimationComponent::GetLastSplinePoint() const
 
 void USplineAnimationComponent::StartWaitTimer()
 {
-	if (!bStopAtPoints)
+	if (!IsStoppingAtPoints())
 	{
 		return;
 	}
 
 	AnimationState = ESplineAnimationState::Wait;
 
-	const float CurrentWaitTime = bUseCustomStops ? CustomStops[PointsIndexes[CurrentPointIndex]] : WaitTime;
+	const float CurrentWaitTime = StopMode == ESplineAnimationStopMode::Custom
+		                              ? CustomStops[PointsIndexes[CurrentPointIndex]]
+		                              : WaitTime;
 
 	if (CurrentWaitTime <= 0.f)
 	{
@@ -664,7 +669,7 @@ void USplineAnimationComponent::Continue()
 	AnimationTimeline->PlayFromStart();
 	AnimationState = ESplineAnimationState::Transition;
 
-	if (bStopAtPoints)
+	if (IsStoppingAtPoints())
 	{
 		OnAnimationResumed.Broadcast();
 	}
@@ -689,4 +694,22 @@ bool USplineAnimationComponent::HasSplineComponent() const
 	}
 
 	return IsValid(SplineComponent);
+}
+
+bool USplineAnimationComponent::IsStoppingAtPoints() const
+{
+	return StopMode != ESplineAnimationStopMode::None;
+}
+
+float USplineAnimationComponent::CalculateDistance(const float Progress) const
+{
+	const float Position = GetPositionAtSpline(CurrentPointIndex, NextPointIndex, Progress);
+	float Distance = FMath::Fmod(Position + SplineOffset, SplineComponent->GetSplineLength());
+
+	if (Distance < 0.f)
+	{
+		Distance = SplineComponent->GetSplineLength() + Distance;
+	}
+
+	return Distance;
 }

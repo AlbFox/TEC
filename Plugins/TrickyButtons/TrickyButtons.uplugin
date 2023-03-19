@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 5,
-	"VersionName": "1.0.4",
+	"Version": 6,
+	"VersionName": "2.0a",
 	"FriendlyName": "TrickyButtons",
 	"Description": "A plugin with a collection of button actors.",
 	"Category": "TrickyPrototyping",
@@ -10,7 +10,7 @@
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
-	"EngineVersion": "4.27.0",
+	"EngineVersion": "5.1.0",
 	"CanContainContent": false,
 	"IsBetaVersion": true,
 	"Installed": true,
@@ -19,10 +19,8 @@
 			"Name": "TrickyButtons",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Linux",
-				"Mac"
+			"PlatformAllowList": [
+				"Win64"
 			]
 		}
 	],

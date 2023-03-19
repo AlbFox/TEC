@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 6,
-	"VersionName": "1.3",
+	"Version": 7,
+	"VersionName": "2.0a",
 	"FriendlyName": "TrickyInteractionSystem",
 	"Description": "A small plugin for implementation of a flexible interaction system.",
 	"Category": "TrickyPrototyping",
@@ -10,7 +10,7 @@
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
-	"EngineVersion": "4.27.0",
+	"EngineVersion": "5.1.0",
 	"CanContainContent": false,
 	"IsBetaVersion": true,
 	"Installed": true,
@@ -19,10 +19,8 @@
 			"Name": "TrickyInteractionSystem",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Linux",
-				"Mac"
+			"PlatformAllowList": [
+				"Win64"
 			]
 		}
 	]

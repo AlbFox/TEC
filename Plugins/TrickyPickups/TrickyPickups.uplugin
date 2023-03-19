@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 4,
-	"VersionName": "1.2",
+	"Version": 6,
+	"VersionName": "2.0a",
 	"FriendlyName": "TrickyPickups",
 	"Description": "A plugin with different base pickup classes",
 	"Category": "TrickyPrototyping",
@@ -10,7 +10,7 @@
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
-	"EngineVersion": "4.27.0",
+	"EngineVersion": "5.1.0",
 	"CanContainContent": false,
 	"IsBetaVersion": true,
 	"Installed": true,
@@ -19,7 +19,7 @@
 			"Name": "TrickyPickups",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
+			"PlatformAllowList": [
 				"Win64"
 			]
 		}

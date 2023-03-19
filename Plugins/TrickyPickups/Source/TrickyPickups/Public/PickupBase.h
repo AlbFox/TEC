@@ -6,7 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "PickupBase.generated.h"
 
-class UEaseAnimationComponent;
+class UFollowAnimationComponent;
+class UPickupEffectsComponent;
+class UPickupEffectType;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPickupActivatedSignature);
 
@@ -22,8 +24,8 @@ public:
 	APickupBase();
 
 protected:
-	virtual void BeginPlay() override;
-
+	virtual void OnConstruction(const FTransform& Transform) override;
+	
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -52,7 +54,16 @@ protected:
 	USceneComponent* PickupRootComponent = nullptr;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess))
-	UEaseAnimationComponent* EaseAnimationComponent = nullptr;
+	UFollowAnimationComponent* FollowAnimationComponent = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess))
+	UPickupEffectsComponent* PickupEffectsComponent = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pickup", meta=(AllowPrivateAccess))
+	TSubclassOf<UPickupEffectType> MainEffectType = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pickup", meta=(AllowPrivateAccess))
+	TArray<TSubclassOf<UPickupEffectType>> SecondaryEffectsTypes;
 
 	/**
 	 * If true the pickup actor will destroy on activation, else it'll be disabled and hidden in game.
@@ -65,14 +76,6 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pickup")
 	bool bInterpolateToTarget = false;
-
-	/**
-	 * A function which is called to activate the actual pickup effect. Override it to implement pickup effect.
-	 */
-	UFUNCTION(BlueprintNativeEvent, Category="Pickup")
-	bool PickupEffect(AActor* OtherActor);
-
-	virtual bool PickupEffect_Implementation(AActor* OtherActor);
 
 	/**
 	 * Called when the pickup effect was successfully activated.
@@ -108,6 +111,4 @@ private:
 	AActor* TargetActor = nullptr;
 
 	bool ActivatePickupEffect();
-
-	void SetAnimationTargetLocation() const;
 };

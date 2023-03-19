@@ -2,8 +2,8 @@
 
 #include "PickupBase.h"
 
-#include "EaseAnimationComponent.h"
-
+#include "FollowAnimationComponent.h"
+#include "PickupEffectsComponent.h"
 
 APickupBase::APickupBase()
 {
@@ -12,32 +12,34 @@ APickupBase::APickupBase()
 	PickupRootComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 	SetRootComponent(PickupRootComponent);
 
-	EaseAnimationComponent = CreateDefaultSubobject<UEaseAnimationComponent>("EaseAnimation");
-	EaseAnimationComponent->Stop();
+	PickupEffectsComponent = CreateDefaultSubobject<UPickupEffectsComponent>("PickupEffects");
+
+	FollowAnimationComponent = CreateDefaultSubobject<UFollowAnimationComponent>("FollowAnimation");
+	FollowAnimationComponent->StopFollowing();
 }
 
-void APickupBase::BeginPlay()
+void APickupBase::OnConstruction(const FTransform& Transform)
 {
-	Super::BeginPlay();
+	Super::OnConstruction(Transform);
 
-	EaseAnimationComponent->Stop();
+	if (PickupEffectsComponent)
+	{
+		PickupEffectsComponent->SetMainEffectType(MainEffectType);
+		PickupEffectsComponent->SetSecondaryEffectsTypes(SecondaryEffectsTypes);
+	}
 }
 
 void APickupBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bInterpolateToTarget && IsValid(TargetActor) && EaseAnimationComponent->GetIsPlaying())
+	if (bInterpolateToTarget && IsValid(TargetActor) && FollowAnimationComponent->GetIsFollowing())
 	{
 		const float Distance = FVector::DistSquared(GetActorLocation(), TargetActor->GetActorLocation());
 
 		if (Distance <= ActivationDistance * ActivationDistance)
 		{
 			ActivatePickupEffect();
-		}
-		else
-		{
-			SetAnimationTargetLocation();
 		}
 	}
 }
@@ -53,8 +55,10 @@ bool APickupBase::ActivatePickup(AActor* OtherActor)
 
 	if (bInterpolateToTarget)
 	{
-		SetAnimationTargetLocation();
-		EaseAnimationComponent->PlayFromStart();
+		FollowAnimationComponent->bFollowActor = true;
+		FollowAnimationComponent->TargetActor = TargetActor;
+		FollowAnimationComponent->StartFollowing();
+		
 		return true;
 	}
 
@@ -72,11 +76,6 @@ void APickupBase::EnablePickup()
 	SetActorEnableCollision(true);
 }
 
-bool APickupBase::PickupEffect_Implementation(AActor* OtherActor)
-{
-	return true;
-}
-
 void APickupBase::DisablePickup()
 {
 	if (IsHidden())
@@ -89,7 +88,7 @@ void APickupBase::DisablePickup()
 
 	if (bInterpolateToTarget)
 	{
-		EaseAnimationComponent->Stop();
+		FollowAnimationComponent->StopFollowing();
 	}
 
 	OnPickupDisabled();
@@ -97,7 +96,7 @@ void APickupBase::DisablePickup()
 
 bool APickupBase::ActivatePickupEffect()
 {
-	if (PickupEffect(TargetActor))
+	if (PickupEffectsComponent->ActivatePickupEffects(TargetActor))
 	{
 		OnPickupEffectActivated(TargetActor);
 		OnPickupActivated.Broadcast();
@@ -115,14 +114,4 @@ bool APickupBase::ActivatePickupEffect()
 	}
 
 	return false;
-}
-
-void APickupBase::SetAnimationTargetLocation() const
-{
-	if (!IsValid(TargetActor))
-	{
-		return;
-	}
-
-	EaseAnimationComponent->SetTargetLocation(TargetActor->GetActorLocation());
 }
